@@ -1,4 +1,4 @@
-function [f,g] = softmax_regression(theta, X,y)
+function [f,g] = softmax_regression_vec(theta, X,y)
   %
   % Arguments:
   %   theta - A vector containing the parameter values to optimize.
@@ -27,6 +27,16 @@ function [f,g] = softmax_regression(theta, X,y)
   %        Before returning g, make sure you form it back into a vector with g=g(:);
   %
 %%% YOUR CODE HERE %%%
-  
+  theta = [theta, zeros(n,1)];
+  A = exp(X'*theta);
+  I = sub2ind(size(A), 1:size(A,1), y);
+  values = A(I);
+  f = -sum(log(values'./sum(A,2)));
+    
+  p = bsxfun(@rdivide, A, sum(A,2));
+  p0 = double(bsxfun(@eq, repmat(1:num_classes, m, 1), y'));
+  diff = p0 - p;
+  g = -X * diff(:,1:num_classes-1);
+    
   g=g(:); % make gradient a vector for minFunc
 
