@@ -27,7 +27,7 @@ images = loadMNISTImages('../common/train-images-idx3-ubyte');
 images = reshape(images,imageDim,imageDim,numImages);
 
 W = randn(filterDim,filterDim,numFilters);
-b = rand(numFilters);
+b = rand(1,numFilters);
 
 %%======================================================================
 %% STEP 1: Implement and test convolution
