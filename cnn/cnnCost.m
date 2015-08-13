@@ -141,7 +141,7 @@ cost = 0; % save objective into cost
 
 %%% YOUR CODE HERE %%%
 ind = double(bsxfun(@eq, repmat((1:numClasses)',1,numImages), labels'));
-cost = -sum(sum(ind.*log(probs),1),2);
+cost = -sum(sum(ind.*log(probs),1),2)/numImages;
 
 % Makes predictions given probs and returns without backproagating errors.
 if pred
@@ -194,6 +194,6 @@ for filterNum = 1:numFilters
 end
 
 %% Unroll gradient into grad vector for minFunc
-grad = [Wc_grad(:) ; Wd_grad(:) ; bc_grad(:) ; bd_grad(:)];
+grad = [Wc_grad(:) ; Wd_grad(:) ; bc_grad(:) ; bd_grad(:)]/numImages;
 
 end
