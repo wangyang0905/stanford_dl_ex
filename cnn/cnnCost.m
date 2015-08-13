@@ -72,6 +72,47 @@ activations = zeros(convDim,convDim,numFilters,numImages);
 activationsPooled = zeros(outputDim,outputDim,numFilters,numImages);
 
 %%% YOUR CODE HERE %%%
+for imageNum = 1:numImages
+  for filterNum = 1:numFilters
+
+    % convolution of image with feature matrix
+    convolvedImage = zeros(convDim, convDim);
+
+    % Obtain the feature (filterDim x filterDim) needed during the convolution
+
+    %%% YOUR CODE HERE %%%
+    filter = Wc(:, :, filterNum);
+
+    % Flip the feature matrix because of the definition of convolution, as explained later
+    filter = rot90(squeeze(filter),2);
+      
+    % Obtain the image
+    im = squeeze(images(:, :, imageNum));
+
+    % Convolve "filter" with "im", adding the result to convolvedImage
+    % be sure to do a 'valid' convolution
+
+    %%% YOUR CODE HERE %%%
+    convolvedImage = conv2(im, filter, 'valid');
+    
+    % Add the bias unit
+    % Then, apply the sigmoid function to get the hidden activation
+
+    %%% YOUR CODE HERE %%%
+    convolvedImage = convolvedImage + bc(filterNum);
+    convolvedImage = 1./(1+exp(-convolvedImage));
+
+    activations(:, :, filterNum, imageNum) = convolvedImage;
+ 
+    % pooling
+    pf = conv2(convolvedImage, ones(poolDim,poolDim), 'valid');
+    sz = size(pf,1);
+    pf = pf(1:poolDim:sz, 1:poolDim:sz);
+    pf = pf/poolDim/poolDim;
+    
+    activationsPooled(:, :, filterNum, imageNum) = pf;
+  end
+end
 
 % Reshape activations into 2-d matrix, hiddenSize x numImages,
 % for Softmax layer
@@ -88,7 +129,8 @@ activationsPooled = reshape(activationsPooled,[],numImages);
 probs = zeros(numClasses,numImages);
 
 %%% YOUR CODE HERE %%%
-
+A = exp(Wd*activationsPooled + bd*ones(1,numImages))';
+probs = bsxfun(@rdivide, A, sum(A,2))';
 %%======================================================================
 %% STEP 1b: Calculate Cost
 %  In this step you will use the labels given as input and the probs
@@ -98,6 +140,8 @@ probs = zeros(numClasses,numImages);
 cost = 0; % save objective into cost
 
 %%% YOUR CODE HERE %%%
+ind = double(bsxfun(@eq, repmat((1:numClasses)',1,numImages), labels'));
+cost = -sum(sum(ind.*log(probs),1),2);
 
 % Makes predictions given probs and returns without backproagating errors.
 if pred
@@ -128,6 +172,26 @@ end;
 %  for that filter with each image and aggregate over images.
 
 %%% YOUR CODE HERE %%%
+delta = -(ind-probs);
+Wd_grad = delta * activationsPooled';
+bd_grad = delta * ones(numImages,1);
+delta = Wd' * delta;
+delta = reshape(delta,outputDim,outputDim,numFilters,numImages);
+
+for filterNum = 1:numFilters
+  for imageNum = 1:numImages
+    delta_pool = delta(:,:,filterNum,imageNum);
+    delta_pool = (1/poolDim^2) * kron(delta_pool,ones(poolDim));
+    act = activations(:,:,filterNum,imageNum);
+    delta_pool = delta_pool.*act.*(1 - act);
+    
+    im = squeeze(images(:, :, imageNum));
+    delta_pool = rot90(squeeze(delta_pool),2);
+    Wc_grad(:,:,filterNum) = Wc_grad(:,:,filterNum) + conv2(im, delta_pool, 'valid');
+    bc_grad(filterNum) = bc_grad(filterNum) + conv2(ones(convDim,convDim), delta_pool, 'valid');
+    
+  end
+end
 
 %% Unroll gradient into grad vector for minFunc
 grad = [Wc_grad(:) ; Wd_grad(:) ; bc_grad(:) ; bd_grad(:)];
